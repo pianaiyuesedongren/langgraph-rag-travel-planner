@@ -10,6 +10,9 @@ from gaode.schemas.travel import (
     TravelPlan,
 )
 from gaode.workflows import graph as workflow
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.constants import END, START
+from langgraph.graph import StateGraph
 
 
 def test_rag_status_comes_from_evidence_not_last_agent_trace() -> None:
@@ -26,6 +29,38 @@ def test_rag_status_comes_from_evidence_not_last_agent_trace() -> None:
     }
 
     assert _infer_rag_used(state) == (True, 1)
+
+
+@pytest.mark.asyncio
+async def test_new_turn_resets_evidence_but_preserves_message_memory() -> None:
+    async def evidence_node(state):
+        city = state["messages"][-1].content
+        return {
+            "sources": [
+                EvidenceSource(
+                    source=f"resource/{city}.md",
+                    title=f"{city}证据",
+                    kind="attraction",
+                    city=city,
+                )
+            ],
+            "traces": [TraceEvent(step="attraction_agent", message=f"{city}完成")],
+        }
+
+    builder = StateGraph(workflow.AgentState)
+    builder.add_node("evidence", evidence_node)
+    builder.add_edge(START, "evidence")
+    builder.add_edge("evidence", END)
+    graph = builder.compile(checkpointer=MemorySaver())
+    config = {"configurable": {"thread_id": "same-conversation"}}
+
+    first = await graph.ainvoke(workflow._graph_input("成都"), config=config)
+    second = await graph.ainvoke(workflow._graph_input("杭州"), config=config)
+
+    assert [source.title for source in first["sources"]] == ["成都证据"]
+    assert [source.title for source in second["sources"]] == ["杭州证据"]
+    assert [trace.message for trace in second["traces"]] == ["杭州完成"]
+    assert [message.content for message in second["messages"]] == ["成都", "杭州"]
 
 
 class FakeGraph:

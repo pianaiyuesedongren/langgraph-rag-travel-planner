@@ -7,6 +7,7 @@ from uuid import uuid4
 from langchain_core.messages import HumanMessage
 from langgraph.constants import END, START
 from langgraph.graph import StateGraph
+from langgraph.types import Overwrite
 
 from gaode.agents.attraction import attraction_node
 from gaode.agents.dining import dining_node
@@ -19,7 +20,26 @@ from gaode.infra.redis import get_redis_manager
 from gaode.memory.checkpoint import get_memory_manager, get_memory_saver
 from gaode.schemas.travel import TravelResponse
 
-PLAN_CACHE_VERSION = "v3"
+PLAN_CACHE_VERSION = "v4"
+
+
+def _graph_input(question: str) -> AgentState:
+    """Build one turn's input while preserving only checkpointed messages.
+
+    Sources and traces use additive reducers so parallel agents can merge their
+    outputs. They must be explicitly overwritten at the start of a new turn,
+    otherwise a persistent thread would accumulate evidence from prior plans.
+    """
+    return {
+        "messages": [HumanMessage(content=question)],
+        "attractions": [],
+        "routes": [],
+        "dining_places": [],
+        "daily_plans": [],
+        "answer": "",
+        "traces": Overwrite([]),
+        "sources": Overwrite([]),
+    }
 
 
 def build_graph(include_itinerary: bool = False, checkpointer=None):
@@ -93,9 +113,7 @@ async def arun_travel_planning(
         config = {}
         memory_mgr = None
 
-    result = await graph.ainvoke(
-        {"messages": [HumanMessage(content=clean_question)]}, config=config
-    )
+    result = await graph.ainvoke(_graph_input(clean_question), config=config)
 
     core_traces = list(result.get("traces", []))
     final_result = await generate_itinerary(result)
@@ -183,7 +201,7 @@ async def stream_travel_planning(
     started_at = asyncio.get_running_loop().time()
     try:
         async for graph_event in graph.astream_events(
-            {"messages": [HumanMessage(content=clean_question)]},
+            _graph_input(clean_question),
             config=config,
             version="v2",
         ):
