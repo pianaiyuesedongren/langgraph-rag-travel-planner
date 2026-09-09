@@ -1,0 +1,32 @@
+[
+  {
+    "query": "杭州适合老人散步的自然景点",
+    "city": "杭州",
+    "kind": "attraction",
+    "expected_titles": ["西湖"]
+  },
+  {
+    "query": "杭州历史文化寺庙",
+    "city": "杭州",
+    "kind": "attraction",
+    "expected_titles": ["灵隐寺"]
+  },
+  {
+    "query": "北京历史文化皇家建筑",
+    "city": "北京",
+    "kind": "attraction",
+    "expected_titles": ["故宫博物院"]
+  },
+  {
+    "query": "北京烤鸭老字号餐厅",
+    "city": "北京",
+    "kind": "restaurant",
+    "expected_titles": ["全聚德"]
+  },
+  {
+    "query": "成都适合亲子的动物景点",
+    "city": "成都",
+    "kind": "attraction",
+    "expected_titles": ["大熊猫繁育研究基地"]
+  }
+]

@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gaode}
+      POSTGRES_USER: ${POSTGRES_USER:-gaode}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gaode_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gaode} -d ${POSTGRES_DB:-gaode}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-gaode_dev_password}"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-gaode_dev_password}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_ENABLED: "true"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gaode}:${POSTGRES_PASSWORD:-gaode_dev_password}@postgres:5432/${POSTGRES_DB:-gaode}
+      CHECKPOINT_BACKEND: postgres
+      CHECKPOINT_DATABASE_URL: postgresql://${POSTGRES_USER:-gaode}:${POSTGRES_PASSWORD:-gaode_dev_password}@postgres:5432/${POSTGRES_DB:-gaode}
+      MIGRATION_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-gaode}:${POSTGRES_PASSWORD:-gaode_dev_password}@postgres:5432/${POSTGRES_DB:-gaode}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-gaode_dev_password}
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app:app --host 0.0.0.0 --port 8000"]
+    volumes:
+      - milvus_data:/app/backend/milvus
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; raise SystemExit(0 if httpx.get('http://127.0.0.1:8000/api/health').status_code == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "8000:8000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      DATABASE_ENABLED: "true"
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gaode}:${POSTGRES_PASSWORD:-gaode_dev_password}@postgres:5432/${POSTGRES_DB:-gaode}
+      CHECKPOINT_BACKEND: postgres
+      CHECKPOINT_DATABASE_URL: postgresql://${POSTGRES_USER:-gaode}:${POSTGRES_PASSWORD:-gaode_dev_password}@postgres:5432/${POSTGRES_DB:-gaode}
+      REDIS_URL: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-gaode_dev_password}
+    command: ["python", "-m", "gaode.worker"]
+    volumes:
+      - milvus_data:/app/backend/milvus
+    depends_on:
+      api:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
+  redis_data:
+  milvus_data:
