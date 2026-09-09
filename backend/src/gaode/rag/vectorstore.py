@@ -164,6 +164,7 @@ class VectorStoreManager:
         embeddings: Embeddings,
         k: int = 5,
         filter_type: str | None = None,
+        city: str = "",
     ) -> list[Document]:
         """搜索相似文档"""
         client = self._get_client()
@@ -174,7 +175,14 @@ class VectorStoreManager:
         query_vector = embeddings.embed_query(query)
 
         search_params = {"metric_type": "COSINE", "params": {}}
-        filter_expr = f'type == "{filter_type}"' if filter_type else None
+        filters: list[str] = []
+        if filter_type:
+            safe_type = filter_type.replace('"', '\\"')
+            filters.append(f'type == "{safe_type}"')
+        if city:
+            safe_city = city.removesuffix("市").replace('"', '\\"')
+            filters.append(f'city == "{safe_city}"')
+        filter_expr = " and ".join(filters) or None
 
         results = client.search(
             collection_name=self._collection_name,

@@ -67,22 +67,37 @@
             <span class="days">{{ result.plan?.days }}天行程</span>
             <span class="status" :class="generationStatusClass">{{ generationStatusLabel }}</span>
           </div>
-          <div class="plan-content" v-html="renderedMarkdown"></div>
-          <div v-if="result.sources?.length" class="sources">
-            <h3>参考来源</h3>
-            <ul>
-              <li v-for="source in result.sources" :key="source.source">
+          <details v-if="result.sources?.length" class="rag-evidence" open>
+            <summary>
+              <span>RAG 参考证据（{{ result.sources.length }} 条）</span>
+              <small>点击收起/展开</small>
+            </summary>
+            <div class="evidence-grid">
+              <article v-for="source in result.sources" :key="`${source.kind}-${source.city}-${source.title || source.source}`" class="evidence-item">
+                <div class="evidence-title">
+                  <span class="evidence-kind">{{ sourceKindLabel(source.kind) }}</span>
+                  <strong>{{ source.title || '未命名知识条目' }}</strong>
+                  <span v-if="source.city" class="evidence-city">{{ source.city }}</span>
+                </div>
+                <p v-if="source.excerpt" class="evidence-excerpt">{{ source.excerpt }}</p>
+                <div class="evidence-meta">
+                  <span v-if="source.score > 0">相似度 {{ Number(source.score).toFixed(3) }}</span>
+                  <span v-if="source.verified_at">核验日期 {{ source.verified_at }}</span>
+                </div>
                 <a
                   v-if="externalSourceUrl(source.url)"
                   :href="externalSourceUrl(source.url)"
                   target="_blank"
                   rel="noopener noreferrer"
-                >{{ source.title || source.source }}</a>
-                <span v-else>{{ source.title || source.source }}</span>
-                <span v-if="source.city"> · {{ source.city }}</span>
-              </li>
-            </ul>
+                >打开外部原始来源 ↗</a>
+                <span v-else class="local-source">本地知识库：{{ source.source }}</span>
+              </article>
+            </div>
+          </details>
+          <div v-else class="rag-evidence-empty">
+            本次未命中目标城市的知识库证据，最终答案由 LLM 与实时工具结果生成。
           </div>
+          <div class="plan-content" v-html="renderedMarkdown"></div>
         </div>
       </div>
 
@@ -127,10 +142,11 @@ export default {
     },
     generationStatusLabel() {
       const mode = this.generationMeta.mode || 'fallback'
-      if (mode === 'llm_rag') return 'RAG + LLM'
-      if (mode === 'llm_only') return 'LLM only'
-      if (mode === 'rag_only') return 'RAG only'
-      return 'fallback'
+      const evidenceCount = this.result?.sources?.length || 0
+      if (mode === 'llm_rag') return `RAG + LLM · ${evidenceCount}条证据`
+      if (mode === 'llm_only') return '仅 LLM · 未命中知识库'
+      if (mode === 'rag_only') return `仅 RAG · ${evidenceCount}条证据`
+      return '降级结果'
     },
     generationStatusClass() {
       const mode = this.generationMeta.mode || 'fallback'
@@ -143,6 +159,11 @@ export default {
     }
   },
   methods: {
+    sourceKindLabel(kind) {
+      if (kind === 'attraction') return '景点'
+      if (kind === 'restaurant') return '餐厅'
+      return '资料'
+    },
     externalSourceUrl(url) {
       return /^https?:\/\//i.test(url || '') ? url : ''
     },
@@ -544,21 +565,97 @@ export default {
   color: #4b5563;
 }
 
-.sources {
-  border-top: 1px solid #e2e8f0;
-  padding: 16px 24px 20px;
+.rag-evidence {
+  margin: 20px 24px 0;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  background: #eff6ff;
+  overflow: hidden;
+}
+
+.rag-evidence summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  color: #1e40af;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rag-evidence summary small {
   color: #64748b;
+  font-weight: 400;
+}
+
+.evidence-grid {
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.evidence-item {
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.evidence-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #1f2937;
+}
+
+.evidence-kind {
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #1d4ed8;
+  background: #dbeafe;
+  font-size: 12px;
+}
+
+.evidence-city,
+.evidence-meta,
+.local-source {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.evidence-city::before {
+  content: '· ';
+}
+
+.evidence-excerpt {
+  margin: 8px 0;
+  color: #475569;
   font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
 }
 
-.sources h3 {
-  color: #334155;
-  margin: 0 0 8px;
+.evidence-meta {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 5px;
 }
 
-.sources ul {
-  margin: 0;
-  padding-left: 20px;
+.local-source {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.rag-evidence-empty {
+  margin: 20px 24px 0;
+  padding: 12px 14px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  color: #92400e;
+  background: #fffbeb;
+  font-size: 13px;
 }
 
 .error-section {

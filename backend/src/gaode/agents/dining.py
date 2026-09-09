@@ -114,8 +114,9 @@ async def dining_node(state: AgentState) -> AgentState:
             "traces": [
                 _trace(
                     "dining_agent",
-                    f"快速餐饮推荐完成，共{len(dining_places)}家餐厅",
+                    f"快速餐饮推荐完成，共{len(dining_places)}家餐厅；RAG命中{len(rag_docs)}条",
                     count=len(dining_places),
+                    evidence_count=len(rag_docs),
                     rag_used=bool(rag_docs),
                 )
             ],
@@ -162,8 +163,9 @@ async def dining_node(state: AgentState) -> AgentState:
             "traces": [
                 _trace(
                     "dining_agent",
-                    f"完成餐饮推荐，共{len(dining_places)}家餐厅",
+                    f"完成餐饮推荐，共{len(dining_places)}家餐厅；RAG命中{len(rag_docs)}条",
                     count=len(dining_places),
+                    evidence_count=len(rag_docs),
                     rag_used=bool(rag_docs),
                 )
             ],
@@ -178,8 +180,10 @@ async def dining_node(state: AgentState) -> AgentState:
             "traces": [
                 _trace(
                     "dining_agent",
-                    f"餐饮推荐失败，已返回兜底结果: {exc}",
+                    f"餐饮实时搜索失败，已使用{len(rag_docs)}条RAG证据生成兜底结果: {exc}",
                     error=str(exc),
+                    evidence_count=len(rag_docs),
+                    rag_used=bool(rag_docs),
                 )
             ],
         }

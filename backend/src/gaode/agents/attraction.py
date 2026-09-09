@@ -103,8 +103,9 @@ async def attraction_node(state: AgentState) -> AgentState:
             "traces": [
                 _trace(
                     "attraction_agent",
-                    f"快速景点检索完成，找到{len(attractions)}个景点",
+                    f"快速景点检索完成，找到{len(attractions)}个景点；RAG命中{len(rag_docs)}条",
                     count=len(attractions),
+                    evidence_count=len(rag_docs),
                     city=constraints.city,
                     rag_used=bool(rag_docs),
                 )
@@ -151,8 +152,9 @@ async def attraction_node(state: AgentState) -> AgentState:
             "traces": [
                 _trace(
                     "attraction_agent",
-                    f"完成景点搜索，找到{len(attractions)}个景点",
+                    f"完成景点搜索，找到{len(attractions)}个景点；RAG命中{len(rag_docs)}条",
                     count=len(attractions),
+                    evidence_count=len(rag_docs),
                     city=constraints.city,
                     rag_used=bool(rag_docs),
                 )
@@ -168,8 +170,10 @@ async def attraction_node(state: AgentState) -> AgentState:
             "traces": [
                 _trace(
                     "attraction_agent",
-                    f"景点搜索失败，已返回兜底结果: {exc}",
+                    f"景点实时搜索失败，已使用{len(rag_docs)}条RAG证据生成兜底结果: {exc}",
                     error=str(exc),
+                    evidence_count=len(rag_docs),
+                    rag_used=bool(rag_docs),
                 )
             ],
         }

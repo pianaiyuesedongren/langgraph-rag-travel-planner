@@ -152,6 +152,13 @@ def _score_local_document(query: str, city: str, doc: Document, kind: str) -> fl
 
 def _search_local_documents(query: str, kind: str, city: str = "", k: int = 5) -> list[Document]:
     docs = list(_local_documents(kind))
+    if city:
+        expected_city = city.removesuffix("市")
+        docs = [
+            doc
+            for doc in docs
+            if str(doc.metadata.get("city", "")).removesuffix("市") == expected_city
+        ]
     if not docs:
         return []
 
@@ -173,10 +180,15 @@ def _merge_documents(primary: list[Document], secondary: list[Document], k: int)
 
     for doc in primary + secondary:
         metadata = getattr(doc, "metadata", {}) or {}
-        key = str(metadata.get("source") or metadata.get("name") or doc.page_content[:120])
-        if key in seen:
+        name = str(metadata.get("name", "")).strip()
+        city = str(metadata.get("city", "")).strip()
+        kind = str(metadata.get("type") or metadata.get("kind") or "general").strip()
+        source = str(metadata.get("source", "")).replace("\\", "/").lower()
+        keys = {f"entity:{kind}|{city}|{name}"} if name else set()
+        keys.add(f"source:{source}" if source else f"content:{doc.page_content[:120]}")
+        if keys & seen:
             continue
-        seen.add(key)
+        seen.update(keys)
         merged.append(doc)
         if len(merged) >= k:
             break
@@ -190,17 +202,25 @@ def documents_to_sources(documents: list[Document]) -> list[EvidenceSource]:
     for document in documents:
         metadata = document.metadata or {}
         source = str(metadata.get("source", ""))
-        if not source or source in seen:
+        title = str(metadata.get("name", "")).strip()
+        city = str(metadata.get("city", "")).strip()
+        kind = str(metadata.get("type") or metadata.get("kind") or "general").strip()
+        normalized_source = source.replace("\\", "/").lower()
+        keys = {f"entity:{kind}|{city}|{title}"} if title else set()
+        keys.add(f"source:{normalized_source}")
+        if not source or keys & seen:
             continue
-        seen.add(source)
+        seen.update(keys)
         sources.append(
             EvidenceSource(
                 source=source,
                 url=str(metadata.get("source_url", "")),
-                title=str(metadata.get("name", "")),
-                kind=str(metadata.get("type") or metadata.get("kind") or "general"),
-                city=str(metadata.get("city", "")),
+                title=title,
+                kind=kind,
+                city=city,
                 score=float(metadata.get("score", 0.0) or 0.0),
+                verified_at=str(metadata.get("verified_at", "")),
+                excerpt=str(document.page_content).strip()[:300],
             )
         )
     return sources
@@ -238,17 +258,9 @@ class TravelRetriever:
             embeddings=embeddings,
             k=k,
             filter_type=filter_type,
+            city=city,
         )
         local_docs = _search_local_documents(query, kind, city=city, k=k)
-        if docs:
-            return _merge_documents(docs, local_docs, k)
-
-        if filter_type is not None:
-            docs = self._vectorstore.search(
-                query=query,
-                embeddings=embeddings,
-                k=k,
-            )
         if docs:
             return _merge_documents(docs, local_docs, k)
         return local_docs

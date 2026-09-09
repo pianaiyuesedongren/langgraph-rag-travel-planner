@@ -3,6 +3,7 @@ from pathlib import Path
 from gaode.rag.retriever import (
     _merge_documents,
     _parse_metadata,
+    _search_local_documents,
     documents_to_sources,
 )
 from langchain_core.documents import Document
@@ -52,3 +53,26 @@ def test_vector_result_keeps_priority_and_sources_are_deduplicated() -> None:
     assert len(sources) == 1
     assert sources[0].title == "故宫博物院"
     assert sources[0].score == 0.91
+
+
+def test_retrieval_never_backfills_from_another_city() -> None:
+    documents = _search_local_documents("热门景点", "attraction", city="成都", k=4)
+    assert documents
+    assert {document.metadata["city"] for document in documents} == {"成都"}
+
+
+def test_same_knowledge_item_is_deduplicated_across_source_path_styles() -> None:
+    vector = Document(
+        page_content="向量结果",
+        metadata={"source": "resource/x.md", "name": "西湖", "city": "杭州", "type": "attraction"},
+    )
+    local = Document(
+        page_content="本地结果",
+        metadata={
+            "source": "C:/repo/resource/x.md",
+            "name": "西湖",
+            "city": "杭州",
+            "kind": "attraction",
+        },
+    )
+    assert len(_merge_documents([vector], [local], 4)) == 1

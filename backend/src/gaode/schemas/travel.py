@@ -108,6 +108,8 @@ class EvidenceSource(BaseModel):
     kind: str = "general"
     city: str = ""
     score: float = 0.0
+    verified_at: str = ""
+    excerpt: str = ""
 
 
 class TraceEvent(BaseModel):

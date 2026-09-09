@@ -28,6 +28,18 @@ def _llm_itinerary_enabled() -> bool:
 
 
 def _infer_rag_used(state: AgentState) -> tuple[bool, int]:
+    sources = state.get("sources", [])
+    if sources:
+        unique_sources = {
+            (
+                getattr(source, "kind", ""),
+                getattr(source, "city", ""),
+                getattr(source, "title", "") or getattr(source, "source", ""),
+            )
+            for source in sources
+        }
+        return True, len(unique_sources)
+
     traces = state.get("traces", [])
     evidence_count = 0
     rag_used = False
@@ -35,10 +47,10 @@ def _infer_rag_used(state: AgentState) -> tuple[bool, int]:
         data = getattr(trace, "data", {}) or {}
         if data.get("rag_used"):
             rag_used = True
-        count = data.get("count")
+        count = data.get("evidence_count", data.get("count"))
         if isinstance(count, int) and count > evidence_count:
             evidence_count = count
-    return rag_used, evidence_count
+    return rag_used, evidence_count if rag_used else 0
 
 
 async def _stream_markdown(

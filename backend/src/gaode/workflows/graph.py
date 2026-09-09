@@ -19,7 +19,7 @@ from gaode.infra.redis import get_redis_manager
 from gaode.memory.checkpoint import get_memory_manager, get_memory_saver
 from gaode.schemas.travel import TravelResponse
 
-PLAN_CACHE_VERSION = "v2"
+PLAN_CACHE_VERSION = "v3"
 
 
 def build_graph(include_itinerary: bool = False, checkpointer=None):
@@ -216,6 +216,13 @@ async def stream_travel_planning(
                     if isinstance(traces, list):
                         collected_traces.extend(traces)
                     result_state.update(output)
+            elif event_name == "on_chain_end" and node_name == "LangGraph":
+                output = graph_event.get("data", {}).get("output")
+                if isinstance(output, dict):
+                    # The root graph output contains reducer-merged sources and
+                    # traces. Node outputs above are only for live progress and
+                    # must not determine the final RAG status by completion order.
+                    result_state = output
 
         async def forward_token(token: str):
             await emit({"event": "token", "data": token})
@@ -237,7 +244,8 @@ async def stream_travel_planning(
             thread_id=final_thread_id,
             plan=final_result.get("plan"),
             answer=answer,
-            traces=collected_traces + list(final_result.get("traces", [])),
+            traces=list(result_state.get("traces", collected_traces))
+            + list(final_result.get("traces", [])),
             sources=result_state.get("sources", []),
             generation_meta=final_result.get("generation_meta"),
         )
