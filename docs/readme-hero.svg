@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">TripMind AI 智能旅行规划系统</title>
+  <desc id="desc">基于 LangGraph、RAG 与高德地图 MCP 的多智能体旅行规划系统</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07142f"/>
+      <stop offset="0.52" stop-color="#172554"/>
+      <stop offset="1" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#a78bfa"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="360" rx="28" fill="url(#bg)"/>
+  <circle cx="1035" cy="48" r="170" fill="#7c3aed" opacity=".2" filter="url(#glow)"/>
+  <circle cx="115" cy="320" r="155" fill="#0ea5e9" opacity=".18" filter="url(#glow)"/>
+  <g opacity=".28" stroke="#93c5fd" fill="none">
+    <path d="M78 94 C205 28 260 153 386 88 S590 42 678 114" stroke-width="2"/>
+    <path d="M822 252 C910 185 980 290 1125 205" stroke-width="2"/>
+    <circle cx="78" cy="94" r="7" fill="#38bdf8"/>
+    <circle cx="386" cy="88" r="7" fill="#38bdf8"/>
+    <circle cx="678" cy="114" r="7" fill="#a78bfa"/>
+    <circle cx="822" cy="252" r="7" fill="#38bdf8"/>
+    <circle cx="1125" cy="205" r="7" fill="#a78bfa"/>
+  </g>
+  <g transform="translate(88 88)">
+    <rect width="76" height="76" rx="20" fill="url(#accent)"/>
+    <path d="M19 51 35 22c2-4 7-4 9 0l14 29M26 39h25" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="190" y="127" fill="#e0f2fe" font-family="Inter, Segoe UI, Microsoft YaHei, sans-serif" font-size="22" font-weight="600" letter-spacing="4">AI TRAVEL INTELLIGENCE</text>
+  <text x="88" y="218" fill="#fff" font-family="Inter, Segoe UI, Microsoft YaHei, sans-serif" font-size="54" font-weight="750">TripMind AI 智能旅行规划系统</text>
+  <rect x="88" y="246" width="610" height="4" rx="2" fill="url(#accent)"/>
+  <text x="88" y="296" fill="#cbd5e1" font-family="Inter, Segoe UI, Microsoft YaHei, sans-serif" font-size="23">LangGraph Multi-Agent · RAG Evidence · AMap MCP · Full-Stack Engineering</text>
+</svg>
